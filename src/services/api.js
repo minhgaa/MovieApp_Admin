@@ -172,6 +172,13 @@ export const getMovieById = async (id) => {
   return handleResponse(response);
 };
 
+export const getViewsByMovieId = async (movieId) => {
+  const response = await fetch(`${API_BASE_URL}/history/movie/${movieId}/views`, {
+    headers: getAuthHeaders()
+  });
+  return handleResponse(response);
+};
+
 export const createMovie = async (movieData) => {
   console.log('Creating movie with data:', movieData);
   
@@ -369,11 +376,21 @@ export const replaceEpisodeVideo = async (movieId, episodeId, videoFile) => {
   return handleResponse(response);
 };
 
+export const TogglePremium = async (movieId, episodeId, isPremium) => {
+  const response = await fetch(`${API_BASE_URL}/movies/${movieId}/episodes/${episodeId}/premium`, {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+    body: isPremium
+  });
+  return handleResponse(response);
+};
+
 // ===== GENRE APIs =====
 export const getGenres = async () => {
   const response = await fetch(`${API_BASE_URL}/Genres`, {
     headers: getAuthHeaders()
   });
+
   return handleResponse(response);
 };
 

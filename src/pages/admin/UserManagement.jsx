@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Edit2, Trash2, X, Shield, User as UserIcon } from 'lucide-react';
-import { getUsers, deleteUser, updateUserRole } from '../../services/api';
+import { Search, Plus, Edit2, Trash2, X, Shield, User as UserIcon, Crown, Unlock } from 'lucide-react';
+import { getUsers, deleteUser, updateUserRole} from '../../services/api';
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
@@ -124,7 +124,7 @@ const UserManagement = () => {
       </div>
 
       {/* Stats Cards with Glassmorphism */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="group backdrop-blur-xl bg-white/10 rounded-3xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300 hover:scale-105 hover:shadow-2xl cursor-pointer overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           <div className="relative z-10">
@@ -147,6 +147,15 @@ const UserManagement = () => {
             <p className="text-sm text-purple-200 font-medium uppercase tracking-wider">User</p>
             <p className="text-4xl font-bold text-cyan-300 mt-3 tabular-nums">
               {users.filter(u => u.role !== 'Admin').length}
+            </p>
+          </div>
+        </div>
+        <div className="group backdrop-blur-xl bg-white/10 rounded-3xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300 hover:scale-105 hover:shadow-2xl cursor-pointer overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/20 to-yellow-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <div className="relative z-10">
+            <p className="text-sm text-purple-200 font-medium uppercase tracking-wider">Premium</p>
+            <p className="text-4xl font-bold text-amber-300 mt-3 tabular-nums">
+              {users.filter(u => u.isPremium).length}
             </p>
           </div>
         </div>
@@ -184,6 +193,7 @@ const UserManagement = () => {
                 <th className="text-left py-5 px-8 text-sm font-bold text-purple-200 uppercase tracking-wider">Email</th>
                 <th className="text-left py-5 px-8 text-sm font-bold text-purple-200 uppercase tracking-wider">Username</th>
                 <th className="text-left py-5 px-8 text-sm font-bold text-purple-200 uppercase tracking-wider">Quyền</th>
+                <th className="text-left py-5 px-8 text-sm font-bold text-purple-200 uppercase tracking-wider">Premium</th>
                 <th className="text-left py-5 px-8 text-sm font-bold text-purple-200 uppercase tracking-wider">Thao tác</th>
               </tr>
             </thead>
@@ -222,6 +232,18 @@ const UserManagement = () => {
                       <span className="inline-flex items-center gap-2 backdrop-blur-lg bg-blue-500/20 px-4 py-2 rounded-xl border border-blue-500/30 shadow-lg">
                         <UserIcon className="w-4 h-4 text-blue-300" />
                         <span className="text-blue-200 font-semibold">{user.role || 'User'}</span>
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-5 px-8">
+                    {user.isPremium ? (
+                      <span className="inline-flex items-center gap-2 backdrop-blur-lg bg-gradient-to-r from-amber-500/20 to-yellow-500/20 px-4 py-2 rounded-xl border border-amber-500/30 shadow-lg shadow-amber-500/20">
+                        <Crown className="w-4 h-4 text-amber-300" />
+                        <span className="text-amber-200 font-semibold">Premium</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-2 backdrop-blur-lg bg-gray-500/20 px-4 py-2 rounded-xl border border-gray-500/30">
+                        <span className="text-gray-300 font-semibold">Free</span>
                       </span>
                     )}
                   </td>

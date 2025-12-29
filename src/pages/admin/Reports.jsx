@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Users, Film, DollarSign, Eye, Calendar, Download, BarChart3 } from 'lucide-react';
+import { TrendingUp, Users, Film, Eye, Download, BarChart3 } from 'lucide-react';
+import { 
+  BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+} from 'recharts';
 import { 
   getDashboardStats, 
   getMonthlySummary, 
   getTopRatedMovies, 
   getGenreDistribution,
-  getUserActivity,
   getNewUsers
 } from '../../services/api';
+
+const COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#f97316', '#14b8a6'];
 
 const Reports = () => {
   const [timeRange, setTimeRange] = useState('month');
@@ -61,19 +66,11 @@ const Reports = () => {
     : 0;
 
   const overviewStats = [
-    { label: 'Tổng lượt xem', value: (stats.totalViews || 0).toLocaleString(), icon: Eye, color: 'bg-green-500' },
-    { label: 'Người dùng mới', value: totalNewUsers.toLocaleString(), icon: Users, color: 'bg-blue-500' },
-    { label: 'Tổng đánh giá', value: (stats.totalReviews || 0).toLocaleString(), icon: TrendingUp, color: 'bg-purple-500' },
-    { label: 'Phim mới', value: (stats.totalMovies || 0).toLocaleString(), icon: Film, color: 'bg-yellow-500' },
+    { label: 'Tổng lượt xem', value: (stats.totalViews || 0).toLocaleString(), icon: Eye, color: 'from-emerald-500 to-teal-500' },
+    { label: 'Người dùng mới', value: totalNewUsers.toLocaleString(), icon: Users, color: 'from-blue-500 to-cyan-500' },
+    { label: 'Tổng đánh giá', value: (stats.totalReviews || 0).toLocaleString(), icon: TrendingUp, color: 'from-purple-500 to-pink-500' },
+    { label: 'Phim mới', value: (stats.totalMovies || 0).toLocaleString(), icon: Film, color: 'from-amber-500 to-orange-500' },
   ];
-
-  const maxViews = Array.isArray(monthlySummary) && monthlySummary.length > 0
-    ? Math.max(...monthlySummary.map(m => m.totalViews || 0), 1)
-    : 1;
-    
-  const maxUsers = Array.isArray(userGrowth) && userGrowth.length > 0
-    ? Math.max(...userGrowth.map(u => u.newUsers || 0), 1)
-    : 1;
 
   const handleExport = () => {
     const data = {
@@ -95,6 +92,22 @@ const Reports = () => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
+
+  // Format data for charts
+  const formattedMonthlyData = monthlySummary.map(item => ({
+    month: new Date(item.month).toLocaleDateString('vi-VN', { month: 'short', year: 'numeric' }),
+    views: item.totalViews || 0
+  }));
+
+  const formattedUserGrowth = userGrowth.map(item => ({
+    date: new Date(item.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }),
+    users: item.newUsers || 0
+  }));
+
+  const formattedGenreData = genreData.map(item => ({
+    name: item.genreName,
+    value: item.movieCount || 0
+  }));
 
   if (loading) {
     return (
@@ -145,16 +158,11 @@ const Reports = () => {
         </div>
       </div>
 
-      {/* Overview Stats with Glassmorphism */}
+      {/* Overview Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {overviewStats.map((stat, index) => (
           <div key={index} className="group backdrop-blur-xl bg-white/10 rounded-3xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300 hover:scale-105 hover:shadow-2xl cursor-pointer overflow-hidden">
-            <div className={`absolute inset-0 bg-gradient-to-br ${
-              stat.color === 'bg-green-500' ? 'from-emerald-500/20 to-teal-500/20' :
-              stat.color === 'bg-blue-500' ? 'from-blue-500/20 to-cyan-500/20' :
-              stat.color === 'bg-purple-500' ? 'from-purple-500/20 to-pink-500/20' :
-              'from-amber-500/20 to-orange-500/20'
-            } opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
+            <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-0 group-hover:opacity-20 transition-opacity duration-300`}></div>
             
             <div className="relative z-10">
               <div className="flex items-start justify-between mb-4">
@@ -162,12 +170,7 @@ const Reports = () => {
                   <p className="text-sm text-purple-200 font-medium uppercase tracking-wider">{stat.label}</p>
                   <p className="text-4xl font-bold text-white mt-3 tabular-nums">{stat.value}</p>
                 </div>
-                <div className={`bg-gradient-to-br ${
-                  stat.color === 'bg-green-500' ? 'from-emerald-500 to-teal-500' :
-                  stat.color === 'bg-blue-500' ? 'from-blue-500 to-cyan-500' :
-                  stat.color === 'bg-purple-500' ? 'from-purple-500 to-pink-500' :
-                  'from-amber-500 to-orange-500'
-                } p-4 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                <div className={`bg-gradient-to-br ${stat.color} p-4 rounded-2xl shadow-lg group-hover:scale-110 transition-transform duration-300`}>
                   <stat.icon className="w-7 h-7 text-white" />
                 </div>
               </div>
@@ -176,88 +179,124 @@ const Reports = () => {
         ))}
       </div>
 
-      {/* Charts with Glass Effect */}
+      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Monthly Views Chart */}
+        {/* Monthly Views Bar Chart */}
         <div className="backdrop-blur-xl bg-white/10 rounded-3xl p-8 border border-white/20 shadow-2xl">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg">
-                <BarChart3 className="w-5 h-5 text-white" />
-              </div>
-              <h2 className="text-2xl font-bold text-white">Lượt xem theo tháng</h2>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg">
+              <BarChart3 className="w-5 h-5 text-white" />
             </div>
+            <h2 className="text-2xl font-bold text-white">Lượt xem theo tháng</h2>
           </div>
-          {!Array.isArray(monthlySummary) || monthlySummary.length === 0 ? (
+          {formattedMonthlyData.length === 0 ? (
             <div className="text-center py-12">
               <BarChart3 className="w-16 h-16 text-purple-300/50 mx-auto mb-4" />
               <p className="text-purple-200 text-lg">Chưa có dữ liệu</p>
             </div>
           ) : (
-            <div className="space-y-5">
-              {monthlySummary.slice(0, 6).map((item, index) => (
-                <div key={index} className="group">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-semibold text-purple-200">
-                      {new Date(item.month).toLocaleDateString('vi-VN', { month: 'short', year: 'numeric' })}
-                    </span>
-                    <span className="text-sm font-bold text-white backdrop-blur-lg bg-white/10 px-3 py-1 rounded-xl border border-white/20">
-                      {(item.totalViews || 0).toLocaleString()} views
-                    </span>
-                  </div>
-                  <div className="relative w-full bg-white/10 backdrop-blur-lg rounded-full h-3 overflow-hidden border border-white/20">
-                    <div
-                      className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full transition-all duration-700 shadow-lg shadow-emerald-500/50"
-                      style={{ width: `${((item.totalViews || 0) / maxViews) * 100}%` }}
-                    ></div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={formattedMonthlyData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                <XAxis dataKey="month" stroke="rgba(255,255,255,0.7)" tick={{ fill: 'rgba(255,255,255,0.7)' }} />
+                <YAxis stroke="rgba(255,255,255,0.7)" tick={{ fill: 'rgba(255,255,255,0.7)' }} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)', 
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '12px',
+                    backdropFilter: 'blur(12px)'
+                  }}
+                  labelStyle={{ color: '#fff' }}
+                />
+                <Bar dataKey="views" fill="url(#colorViews)" radius={[8, 8, 0, 0]} />
+                <defs>
+                  <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#14b8a6" stopOpacity={0.8}/>
+                  </linearGradient>
+                </defs>
+              </BarChart>
+            </ResponsiveContainer>
           )}
         </div>
 
-        {/* User Growth Chart */}
+        {/* User Growth Line Chart */}
         <div className="backdrop-blur-xl bg-white/10 rounded-3xl p-8 border border-white/20 shadow-2xl">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
-                <TrendingUp className="w-5 h-5 text-white" />
-              </div>
-              <h2 className="text-2xl font-bold text-white">Người dùng mới</h2>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
+              <TrendingUp className="w-5 h-5 text-white" />
             </div>
+            <h2 className="text-2xl font-bold text-white">Người dùng mới</h2>
           </div>
-          {!Array.isArray(userGrowth) || userGrowth.length === 0 ? (
+          {formattedUserGrowth.length === 0 ? (
             <div className="text-center py-12">
               <Users className="w-16 h-16 text-purple-300/50 mx-auto mb-4" />
               <p className="text-purple-200 text-lg">Chưa có dữ liệu</p>
             </div>
           ) : (
-            <div className="space-y-5">
-              {userGrowth.slice(0, 6).map((item, index) => (
-                <div key={index} className="group">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-semibold text-purple-200">
-                      {new Date(item.date).toLocaleDateString('vi-VN')}
-                    </span>
-                    <span className="text-sm font-bold text-white backdrop-blur-lg bg-white/10 px-3 py-1 rounded-xl border border-white/20">
-                      {(item.newUsers || 0).toLocaleString()} users
-                    </span>
-                  </div>
-                  <div className="relative w-full bg-white/10 backdrop-blur-lg rounded-full h-3 overflow-hidden border border-white/20">
-                    <div
-                      className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all duration-700 shadow-lg shadow-blue-500/50"
-                      style={{ width: `${((item.newUsers || 0) / maxUsers) * 100}%` }}
-                    ></div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={formattedUserGrowth}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                <XAxis dataKey="date" stroke="rgba(255,255,255,0.7)" tick={{ fill: 'rgba(255,255,255,0.7)' }} />
+                <YAxis stroke="rgba(255,255,255,0.7)" tick={{ fill: 'rgba(255,255,255,0.7)' }} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)', 
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '12px',
+                    backdropFilter: 'blur(12px)'
+                  }}
+                  labelStyle={{ color: '#fff' }}
+                />
+                <Line type="monotone" dataKey="users" stroke="#3b82f6" strokeWidth={3} dot={{ fill: '#3b82f6', r: 5 }} activeDot={{ r: 8 }} />
+              </LineChart>
+            </ResponsiveContainer>
           )}
         </div>
       </div>
 
-      {/* Top Movies with Glass Effect */}
+      {/* Genre Distribution Pie Chart */}
+      {formattedGenreData.length > 0 && (
+        <div className="backdrop-blur-xl bg-white/10 rounded-3xl p-8 border border-white/20 shadow-2xl">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/50">
+              <Film className="w-6 h-6 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-white">Phân bố thể loại</h2>
+          </div>
+          <div className="flex flex-col lg:flex-row items-center gap-8">
+            <ResponsiveContainer width="100%" height={400}>
+              <PieChart>
+                <Pie
+                  data={formattedGenreData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                  outerRadius={140}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {formattedGenreData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)', 
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '12px',
+                    backdropFilter: 'blur(12px)'
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      {/* Top Movies Table */}
       <div className="backdrop-blur-xl bg-white/10 rounded-3xl border border-white/20 shadow-2xl overflow-hidden">
         <div className="p-8 border-b border-white/10">
           <div className="flex items-center gap-3">
@@ -321,27 +360,6 @@ const Reports = () => {
           </div>
         )}
       </div>
-
-      {/* Genre Distribution */}
-      {Array.isArray(genreData) && genreData.length > 0 && (
-        <div className="backdrop-blur-xl bg-white/10 rounded-3xl p-8 border border-white/20 shadow-2xl">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/50">
-              <Film className="w-6 h-6 text-white" />
-            </div>
-            <h2 className="text-2xl font-bold text-white">Phân bố thể loại</h2>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {genreData.map((genre, index) => (
-              <div key={index} className="group backdrop-blur-lg bg-white/10 rounded-2xl p-5 border border-white/20 hover:bg-white/20 transition-all duration-300 hover:scale-105 cursor-pointer">
-                <p className="text-sm text-purple-200 mb-2 font-medium">{genre.genreName || 'N/A'}</p>
-                <p className="text-3xl font-bold text-white tabular-nums">{(genre.movieCount || 0).toLocaleString()}</p>
-                <p className="text-xs text-purple-300 mt-2 font-semibold uppercase">phim</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

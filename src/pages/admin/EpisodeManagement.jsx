@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Edit2, Trash2, Upload, Play, Clock, Calendar, X } from 'lucide-react';
-import { getMovieById, getEpisodes, createEpisodeWithVideo, deleteEpisode, updateEpisode, replaceEpisodeVideo, getStaticFileUrl } from '../../services/api';
+import { ArrowLeft, Plus, Edit2, Trash2, Upload, Play, Clock, Calendar, X, Crown, Unlock } from 'lucide-react';
+import { getMovieById, getEpisodes, createEpisodeWithVideo, deleteEpisode, updateEpisode, replaceEpisodeVideo, getStaticFileUrl, TogglePremium } from '../../services/api';
 
 const EpisodeManagement = () => {
   const { movieId } = useParams();
@@ -184,6 +184,24 @@ const EpisodeManagement = () => {
     }
   };
 
+  const handleTogglePremium = async (episodeId, isPremium, episodeTitle) => {
+    const action = isPremium ? 'miễn phí' : 'premium';
+    if (!confirm(`Bạn có chắc muốn đặt tập "${episodeTitle}" thành ${action}?`)) return;
+    
+    try {
+        await TogglePremium(movieId, episodeId, !isPremium);
+      
+      // Update local state
+      setEpisodes(episodes.map(e => 
+        e.id === episodeId ? { ...e, isPremium: !isPremium } : e
+      ));
+      
+      alert(`Đã đặt tập phim thành ${action} thành công!`);
+    } catch (err) {
+      alert('Không thể cập nhật trạng thái premium: ' + err.message);
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -302,6 +320,12 @@ const EpisodeManagement = () => {
                 <div className="absolute top-3 left-3 backdrop-blur-lg bg-black/60 text-white px-4 py-2 rounded-xl font-bold border border-white/30 shadow-lg">
                   Tập {episode.episodeNumber}
                 </div>
+                {episode.isPremium && (
+                  <div className="absolute top-3 right-3 backdrop-blur-lg bg-gradient-to-r from-amber-500 to-yellow-500 text-white px-3 py-2 rounded-xl flex items-center gap-2 border border-white/30 shadow-lg shadow-amber-500/50">
+                    <Crown className="w-4 h-4" />
+                    <span className="font-bold text-sm">PREMIUM</span>
+                  </div>
+                )}
                 {episode.duration && (
                   <div className="absolute bottom-3 right-3 backdrop-blur-lg bg-black/60 text-white px-3 py-2 rounded-xl flex items-center gap-2 border border-white/30 shadow-lg">
                     <Clock className="w-4 h-4" />
@@ -329,7 +353,7 @@ const EpisodeManagement = () => {
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-2">
+                <div className="flex gap-2 mb-2">
                   <button
                     onClick={() => openVideoModal(episode)}
                     className="flex-1 px-4 py-3 backdrop-blur-lg bg-blue-500/80 hover:bg-blue-600/90 text-white rounded-2xl transition-all flex items-center justify-center gap-2 font-semibold border border-white/30 shadow-lg hover:scale-105"
@@ -352,6 +376,28 @@ const EpisodeManagement = () => {
                     Xóa
                   </button>
                 </div>
+
+                {/* Premium Toggle */}
+                <button
+                  onClick={() => handleTogglePremium(episode.id, episode.isPremium, episode.title)}
+                  className={`w-full px-4 py-3 backdrop-blur-lg ${
+                    episode.isPremium 
+                      ? 'bg-gradient-to-r from-amber-500/80 to-yellow-500/80 hover:from-amber-600/90 hover:to-yellow-600/90 shadow-amber-500/50' 
+                      : 'bg-gradient-to-r from-green-500/80 to-emerald-500/80 hover:from-green-600/90 hover:to-emerald-600/90 shadow-green-500/50'
+                  } text-white rounded-2xl transition-all flex items-center justify-center gap-2 font-semibold border border-white/30 shadow-lg hover:scale-105`}
+                >
+                  {episode.isPremium ? (
+                    <>
+                      <Unlock className="w-4 h-4" />
+                      <span>Đặt miễn phí</span>
+                    </>
+                  ) : (
+                    <>
+                      <Crown className="w-4 h-4" />
+                      <span>Đặt Premium</span>
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           ))}

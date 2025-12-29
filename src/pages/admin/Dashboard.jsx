@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Film, TrendingUp, Eye } from 'lucide-react';
-import { getDashboardStats, getPopularMovies, getTopRatedMovies } from '../../services/api';
+import { getDashboardStats, getTopRatedMovies, getMovieById, getViewsByMovieId, getStaticFileUrl } from '../../services/api';
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -10,7 +10,7 @@ const Dashboard = () => {
     totalViews: 0,
     activeUsersLast30Days: 0
   });
-  const [popularMovies, setPopularMovies] = useState([]);
+  const [topMovies, setTopMovies] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -22,11 +22,40 @@ const Dashboard = () => {
       setLoading(true);
       const [overviewData, moviesData] = await Promise.all([
         getDashboardStats(),
-        getPopularMovies(5)
+        getTopRatedMovies(5)
       ]);
       
       setStats(overviewData || {});
-      setPopularMovies(Array.isArray(moviesData) ? moviesData : []);
+      
+      // Fetch additional data for each movie
+      if (Array.isArray(moviesData) && moviesData.length > 0) {
+        const moviesWithDetails = await Promise.all(
+          moviesData.map(async (movie) => {
+            try {
+              const [movieDetails, viewsData] = await Promise.all([
+                getMovieById(movie.movieId),
+                getViewsByMovieId(movie.movieId)
+              ]);
+              
+              return {
+                ...movie,
+                posterUrl: movieDetails?.posterUrl,
+                viewCount: viewsData?.totalViews ?? 0
+              };
+            } catch (err) {
+              console.error(`Error fetching details for movie ${movie.movieId}:`, err);
+              return {
+                ...movie,
+                posterUrl: null,
+                viewCount: 0
+              };
+            }
+          })
+        );
+        setTopMovies(moviesWithDetails);
+      } else {
+        setTopMovies([]);
+      }
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
       alert('Không thể tải dữ liệu dashboard: ' + err.message);
@@ -128,18 +157,18 @@ const Dashboard = () => {
         ))}
       </div>
 
-      {/* Popular Movies with Glass Effect */}
+      {/* Top Rated Movies with Glass Effect */}
       <div className="backdrop-blur-xl bg-white/10 rounded-3xl border border-white/20 shadow-2xl overflow-hidden">
         <div className="p-8 border-b border-white/10">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/50">
               <TrendingUp className="w-6 h-6 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-white">Phim xem nhiều nhất</h2>
+            <h2 className="text-2xl font-bold text-white">Top phim đánh giá cao nhất</h2>
           </div>
         </div>
         
-        {!Array.isArray(popularMovies) || popularMovies.length === 0 ? (
+        {!Array.isArray(topMovies) || topMovies.length === 0 ? (
           <div className="p-12 text-center">
             <Film className="w-16 h-16 text-purple-300/50 mx-auto mb-4" />
             <p className="text-purple-200 text-lg">Chưa có dữ liệu phim</p>
@@ -149,34 +178,52 @@ const Dashboard = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-white/10">
+                  <th className="text-left py-5 px-8 text-sm font-bold text-purple-200 uppercase tracking-wider">Hạng</th>
+                  <th className="text-left py-5 px-8 text-sm font-bold text-purple-200 uppercase tracking-wider">Poster</th>
                   <th className="text-left py-5 px-8 text-sm font-bold text-purple-200 uppercase tracking-wider">Tên phim</th>
-                  <th className="text-left py-5 px-8 text-sm font-bold text-purple-200 uppercase tracking-wider">Lượt xem</th>
                   <th className="text-left py-5 px-8 text-sm font-bold text-purple-200 uppercase tracking-wider">Đánh giá</th>
+                  <th className="text-left py-5 px-8 text-sm font-bold text-purple-200 uppercase tracking-wider">Lượt xem</th>
+                  <th className="text-left py-5 px-8 text-sm font-bold text-purple-200 uppercase tracking-wider">Số reviews</th>
                 </tr>
               </thead>
               <tbody>
-                {popularMovies.map((movie, index) => (
+                {topMovies.map((movie, index) => (
                   <tr 
                     key={movie.movieId || index} 
                     className="border-b border-white/5 hover:bg-white/10 transition-all duration-200 group"
                   >
                     <td className="py-5 px-8">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold shadow-lg shadow-purple-500/30">
-                          {index + 1}
-                        </div>
-                        <span className="font-semibold text-white text-lg group-hover:text-purple-200 transition-colors">
-                          {movie.title || 'N/A'}
-                        </span>
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-white shadow-lg ${
+                        index === 0 ? 'bg-gradient-to-br from-yellow-400 to-amber-500 shadow-yellow-500/50' : 
+                        index === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-400 shadow-gray-400/50' : 
+                        index === 2 ? 'bg-gradient-to-br from-orange-400 to-orange-600 shadow-orange-500/50' : 
+                        'bg-gradient-to-br from-slate-500 to-slate-600'
+                      }`}>
+                        {index + 1}
                       </div>
                     </td>
                     <td className="py-5 px-8">
-                      <div className="flex items-center gap-2">
-                        <Eye className="w-5 h-5 text-cyan-400" />
-                        <span className="text-white font-medium text-lg tabular-nums">
-                          {(movie.viewCount || 0).toLocaleString()}
-                        </span>
+                      <div className="w-16 h-24 rounded-xl overflow-hidden shadow-lg border-2 border-white/30 group-hover:scale-105 transition-transform duration-300">
+                        {movie.posterUrl ? (
+                          <img
+                            src={getStaticFileUrl(movie.posterUrl)}
+                            alt={movie.title}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.target.src = 'https://via.placeholder.com/64x96?text=No+Image';
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                            <Film className="w-8 h-8 text-white" />
+                          </div>
+                        )}
                       </div>
+                    </td>
+                    <td className="py-5 px-8">
+                      <span className="font-semibold text-white text-lg group-hover:text-cyan-300 transition-colors">
+                        {movie.title || 'N/A'}
+                      </span>
                     </td>
                     <td className="py-5 px-8">
                       <div className="inline-flex items-center gap-2 backdrop-blur-lg bg-amber-500/20 px-4 py-2 rounded-xl border border-amber-500/30">
@@ -185,6 +232,19 @@ const Dashboard = () => {
                           {movie.averageRating?.toFixed(1) || 'N/A'}
                         </span>
                       </div>
+                    </td>
+                    <td className="py-5 px-8">
+                      <div className="inline-flex items-center gap-2 backdrop-blur-lg bg-cyan-500/20 px-4 py-2 rounded-xl border border-cyan-500/30">
+                        <Eye className="w-5 h-5 text-cyan-300" />
+                        <span className="text-white font-bold text-lg tabular-nums">
+                          {(movie.viewCount || 0).toLocaleString()}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="py-5 px-8">
+                      <span className="text-purple-200 font-medium text-lg tabular-nums">
+                        {(movie.reviewCount || 0).toLocaleString()}
+                      </span>
                     </td>
                   </tr>
                 ))}

@@ -158,15 +158,6 @@ const Login = () => {
             </button>
           </form>
 
-          {/* Footer */}
-          <div className="px-8 pb-8">
-            <div className="backdrop-blur-lg bg-white/5 rounded-2xl p-4 border border-white/10 text-center">
-              <a href="#" className="text-sm text-cyan-300 hover:text-cyan-200 font-semibold transition-colors inline-flex items-center gap-2 group">
-                Quên mật khẩu?
-                <span className="group-hover:translate-x-1 transition-transform">→</span>
-              </a>
-            </div>
-          </div>
         </div>
 
         {/* Demo Credentials Info */}

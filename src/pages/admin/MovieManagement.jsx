@@ -103,10 +103,8 @@ const MovieManagement = () => {
       title: movie.title || '',
       description: movie.description || '',
       releaseYear: movie.releaseYear?.toString() || '',
-      director: movie.director || '',
       castIds: castIds,
-      posterFile: null,
-      trailerUrl: movie.trailerUrl || '',
+      PosterFile: null,
       genreIds: genreIds
     });
     setPosterPreview(getStaticFileUrl(movie.posterUrl) || null);
@@ -159,22 +157,15 @@ const MovieManagement = () => {
         title: formData.title || (editingMovie ? editingMovie.title : ''),
         description: formData.description || (editingMovie ? editingMovie.description : ''),
         releaseYear: formData.releaseYear || (editingMovie ? editingMovie.releaseYear?.toString() : ''),
-        posterFile: formData.posterFile,
+        PosterFile: formData.PosterFile,
         castIds: formData.castIds || [],
         genreIds: formData.genreIds || []
       };
       
-      if (formData.director || (editingMovie && editingMovie.director)) {
-        movieData.director = formData.director || editingMovie.director;
-      }
-      
-      if (formData.trailerUrl || (editingMovie && editingMovie.trailerUrl)) {
-        movieData.trailerUrl = formData.trailerUrl || editingMovie.trailerUrl;
-      }
       
       console.log('Submitting movie data:', {
         ...movieData,
-        posterFile: movieData.posterFile ? `File: ${movieData.posterFile.name}` : 'No file'
+        posterFile: movieData.PosterFile ? `File: ${movieData.PosterFile.name}` : 'No file'
       });
 
       if (editingMovie) {
