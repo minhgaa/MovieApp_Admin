@@ -208,7 +208,7 @@ export const createMovie = async (movieData) => {
   }
   
   // Poster file - REQUIRED
-  formData.append('PosterURL', movieData.posterFile);
+  formData.append('PosterFile', movieData.posterFile);
   
   // Optional fields
   if (movieData.description) {
@@ -277,7 +277,7 @@ export const updateMovie = async (id, movieData) => {
   }
   
   if (movieData.posterFile) {
-    formData.append('PosterURL', movieData.posterFile);
+    formData.append('PosterFile', movieData.posterFile);
   }
   
   if (movieData.director) {
@@ -594,5 +594,3 @@ export const deleteReview = async (reviewId) => {
   });
   return handleResponse(response);
 };
-
-

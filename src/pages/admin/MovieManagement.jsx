@@ -1,6 +1,7 @@
-import React, { useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
+import { Eye, Star } from 'lucide-react';
 import { Search, Plus, Edit2, Trash2, X, Film as FilmIcon, User, Upload, List } from 'lucide-react';
-import { getMovies, deleteMovie, createMovie, updateMovie, getGenres, getCasts, getStaticFileUrl } from '../../services/api';
+import { getMovies, deleteMovie, createMovie, updateMovie, getGenres, getCasts, getStaticFileUrl, getViewsByMovieId } from '../../services/api';
 import { useNavigate } from "react-router-dom";
 
 const MovieManagement = () => {
@@ -15,16 +16,42 @@ const MovieManagement = () => {
   const [editingMovie, setEditingMovie] = useState(null);
   const [castSearchTerm, setCastSearchTerm] = useState('');
   const [posterPreview, setPosterPreview] = useState(null);
+  const [movieViews, setMovieViews] = useState({});
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    releaseYear: '', 
+    releaseYear: '',
     castIds: [],
     posterFile: null,
     genreIds: []
   });
   const navigate = useNavigate();
+  const fetchMovieViews = async (movies) => {
+    try {
+      const results = await Promise.all(
+        movies.map(async (movie) => {
+          try {
+            const views = await getViewsByMovieId(movie.id);
+            return { movieId: movie.id, views };
+          } catch (err) {
+            console.error(`Error fetching views for movie ${movie.id}`, err);
+            return { movieId: movie.id, views: 0 };
+          }
+        })
+      );
 
+      const viewsMap = {};
+      results.forEach(r => {
+        viewsMap[r.movieId] = r.views || 0;
+      });
+
+      setMovieViews(viewsMap);
+    } catch (err) {
+      console.error('Error fetching movie views:', err);
+    }
+  };
+
+  
   useEffect(() => {
     fetchMovies();
     fetchGenres();
@@ -36,6 +63,7 @@ const MovieManagement = () => {
       setLoading(true);
       const data = await getMovies();
       setMovies(data);
+      fetchMovieViews(data);
       setError('');
     } catch (err) {
       setError('Không thể tải danh sách phim');
@@ -65,7 +93,7 @@ const MovieManagement = () => {
 
   const handleDelete = async (id, title) => {
     if (!confirm(`Bạn có chắc muốn xóa phim "${title}"?`)) return;
-    
+
     try {
       await deleteMovie(id);
       setMovies(movies.filter(m => m.id !== id));
@@ -95,16 +123,16 @@ const MovieManagement = () => {
   const openEditModal = (movie) => {
     console.log('Opening edit modal with movie:', movie);
     setEditingMovie(movie);
-    
+
     const castIds = Array.isArray(movie.casts) ? movie.casts.map(c => c.id) : [];
     const genreIds = Array.isArray(movie.genres) ? movie.genres.map(g => g.id) : [];
-    
+
     setFormData({
       title: movie.title || '',
       description: movie.description || '',
       releaseYear: movie.releaseYear?.toString() || '',
       castIds: castIds,
-      PosterFile: null,
+      posterFile: null,
       genreIds: genreIds
     });
     setPosterPreview(getStaticFileUrl(movie.posterUrl) || null);
@@ -119,9 +147,9 @@ const MovieManagement = () => {
         alert('File quá lớn! Vui lòng chọn file nhỏ hơn 5MB');
         return;
       }
-      
+
       setFormData(prev => ({ ...prev, posterFile: file }));
-      
+
       const reader = new FileReader();
       reader.onloadend = () => {
         setPosterPreview(reader.result);
@@ -132,40 +160,40 @@ const MovieManagement = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     try {
       setSubmitting(true);
-      
+
       if (!editingMovie) {
         if (!formData.title || formData.title.trim() === '') {
           alert('Vui lòng nhập tên phim');
           return;
         }
-        
+
         if (!formData.releaseYear) {
           alert('Vui lòng nhập năm phát hành');
           return;
         }
-        
+
         if (!formData.posterFile) {
           alert('Vui lòng chọn ảnh poster');
           return;
         }
       }
-      
+
       const movieData = {
         title: formData.title || (editingMovie ? editingMovie.title : ''),
         description: formData.description || (editingMovie ? editingMovie.description : ''),
         releaseYear: formData.releaseYear || (editingMovie ? editingMovie.releaseYear?.toString() : ''),
-        PosterFile: formData.PosterFile,
+        posterFile: formData.posterFile,
         castIds: formData.castIds || [],
         genreIds: formData.genreIds || []
       };
-      
-      
+
+
       console.log('Submitting movie data:', {
         ...movieData,
-        posterFile: movieData.PosterFile ? `File: ${movieData.PosterFile.name}` : 'No file'
+        posterFile: movieData.posterFile ? `File: ${movieData.posterFile.name}` : 'No file'
       });
 
       if (editingMovie) {
@@ -175,7 +203,7 @@ const MovieManagement = () => {
         await createMovie(movieData);
         alert('Thêm phim mới thành công!');
       }
-      
+
       setShowModal(false);
       fetchMovies();
     } catch (err) {
@@ -255,7 +283,7 @@ const MovieManagement = () => {
               <p className="text-purple-200 mt-1 text-lg">Quản lý kho phim của hệ thống</p>
             </div>
           </div>
-          <button 
+          <button
             onClick={openCreateModal}
             className="group relative backdrop-blur-lg bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-6 py-3 rounded-2xl flex items-center gap-3 transition-all duration-300 shadow-lg shadow-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/50 hover:scale-105 border border-white/20"
           >
@@ -325,8 +353,8 @@ const MovieManagement = () => {
         {filteredMovies.map((movie) => (
           <div key={movie.id} className="group backdrop-blur-xl bg-white/10 rounded-3xl overflow-hidden hover:bg-white/20 transition-all duration-300 hover:shadow-2xl hover:scale-105 border border-white/20">
             <div className="relative aspect-[2/3] overflow-hidden">
-              <img 
-                src={getStaticFileUrl(movie.posterUrl) || 'https://via.placeholder.com/300x450'} 
+              <img
+                src={getStaticFileUrl(movie.posterUrl) || 'https://via.placeholder.com/300x450'}
                 alt={movie.title}
                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                 onError={(e) => {
@@ -334,11 +362,11 @@ const MovieManagement = () => {
                 }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-60 group-hover:opacity-80 transition-opacity"></div>
-              
+
               {/* Hover Actions */}
               <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
                 <div className="flex flex-col gap-3 w-full px-4">
-                  <button 
+                  <button
                     onClick={() => navigate(`/admin/movies/${movie.id}/episodes`)}
                     className="w-full backdrop-blur-lg bg-purple-500/80 hover:bg-purple-600/90 text-white py-3 rounded-2xl font-semibold transition-all flex items-center justify-center gap-2 border border-white/30 shadow-lg hover:scale-105"
                   >
@@ -346,14 +374,14 @@ const MovieManagement = () => {
                     Quản lý tập phim
                   </button>
                   <div className="flex gap-3">
-                    <button 
+                    <button
                       onClick={() => openEditModal(movie)}
                       className="flex-1 backdrop-blur-lg bg-blue-500/80 hover:bg-blue-600/90 text-white py-3 rounded-2xl font-semibold transition-all flex items-center justify-center gap-2 border border-white/30 shadow-lg hover:scale-105"
                     >
                       <Edit2 className="w-4 h-4" />
                       Sửa
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleDelete(movie.id, movie.title)}
                       className="flex-1 backdrop-blur-lg bg-red-500/80 hover:bg-red-600/90 text-white py-3 rounded-2xl font-semibold transition-all flex items-center justify-center gap-2 border border-white/30 shadow-lg hover:scale-105"
                     >
@@ -364,13 +392,32 @@ const MovieManagement = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="p-5">
-              <h3 className="font-bold text-white text-lg mb-2 line-clamp-1">{movie.title}</h3>
-              <div className="flex items-center gap-2 text-sm text-purple-300 mb-3">
-                <span className="backdrop-blur-lg bg-white/10 px-3 py-1 rounded-xl border border-white/20">
-                  {movie.releaseYear || 'N/A'}
+              <div className='flex flex-row space-x-4'>
+                <h3 className="font-bold text-white text-lg line-clamp-1">{movie.title}</h3>
+                <div className="flex items-center gap-2 text-sm text-purple-300 mb-1">
+                  <span className="backdrop-blur-lg bg-white/10 px-3 py-1 rounded-xl border border-white/20">
+                    {movie.releaseYear || 'N/A'}
+                  </span>
+                </div>
+              </div>
+              <div className="flex py-2 items-center gap-3 text-sm">
+                {/* Rating */}
+                <span className="flex items-center gap-1 backdrop-blur-lg bg-yellow-500/20 px-3 py-1 rounded-xl border border-yellow-500/30 text-yellow-300">
+                  <Star className="w-4 h-4" />
+                  {movie.rating?.toFixed(1) || '0.0'}
                 </span>
+
+                {/* Views */}
+                {movieViews[movie.id] === undefined ? (
+                  <span className="text-xs text-purple-300">Loading...</span>
+                ) : (
+                  <span className="flex items-center gap-1 backdrop-blur-lg bg-cyan-500/20 px-3 py-1 rounded-xl border border-cyan-500/30 text-cyan-300">
+                    <Eye className="w-4 h-4" />
+                    {movieViews[movie.id].totalViews}
+                  </span>
+                )}
               </div>
               <p className="text-sm text-purple-200 line-clamp-2">{movie.description}</p>
             </div>
@@ -400,7 +447,7 @@ const MovieManagement = () => {
                   {editingMovie ? 'Chỉnh sửa phim' : 'Thêm phim mới'}
                 </h3>
               </div>
-              <button 
+              <button
                 onClick={() => setShowModal(false)}
                 className="p-2 hover:bg-white/10 rounded-xl transition-all border border-white/10 hover:border-white/20"
               >
@@ -493,7 +540,7 @@ const MovieManagement = () => {
                 <label className="block text-sm font-bold text-purple-200 mb-3 uppercase tracking-wider">
                   Diễn viên {editingMovie && <span className="text-xs text-purple-300 normal-case">(để trống nếu không thay đổi)</span>}
                 </label>
-                
+
                 {formData.castIds.length > 0 && (
                   <div className="mb-3 p-4 backdrop-blur-lg bg-blue-500/20 rounded-2xl border border-blue-500/30">
                     <p className="text-sm text-blue-200">
@@ -553,11 +600,10 @@ const MovieManagement = () => {
                 </label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {genres.map(genre => (
-                    <label key={genre.id} className={`flex items-center gap-3 p-4 backdrop-blur-lg rounded-2xl cursor-pointer transition-all border-2 ${
-                      formData.genreIds.includes(genre.id)
+                    <label key={genre.id} className={`flex items-center gap-3 p-4 backdrop-blur-lg rounded-2xl cursor-pointer transition-all border-2 ${formData.genreIds.includes(genre.id)
                         ? 'bg-cyan-500/20 border-cyan-500/50'
                         : 'bg-white/5 border-white/20 hover:bg-white/10 hover:border-white/30'
-                    }`}>
+                      }`}>
                       <input
                         type="checkbox"
                         checked={formData.genreIds.includes(genre.id)}
