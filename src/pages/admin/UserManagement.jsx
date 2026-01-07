@@ -116,10 +116,7 @@ const UserManagement = () => {
               <p className="text-purple-200 mt-1 text-lg">Quản lý thông tin và quyền hạn người dùng</p>
             </div>
           </div>
-          <button className="group relative backdrop-blur-lg bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white px-6 py-3 rounded-2xl flex items-center gap-3 transition-all duration-300 shadow-lg shadow-blue-500/50 hover:shadow-xl hover:shadow-blue-500/50 hover:scale-105 border border-white/20">
-            <Plus className="w-5 h-5" />
-            <span className="font-semibold">Thêm người dùng</span>
-          </button>
+          
         </div>
       </div>
 
